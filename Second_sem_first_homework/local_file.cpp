@@ -10,25 +10,24 @@
 #include "algorithm"
 
 int main() {
-    int n, number;
+    int n;
     std::cin >> n;
     int *array = new int[n];
     int *answer_array = new int[n];
     for (int i = 0; i < n; i++) {
-        std::cin >> number;
-        array[i] = number;
+        std::cin >> array[i];
     }
     for (int i = 0; i < n; i++) {
         answer_array[i] = 0;
     }
     std::vector<int> vector (array, array + n);
-    sort (vector.begin(), vector.end());
-    answer_array[1] = vector[1] - vector[0];
+    std::sort(array, array + n);
     if (n > 2) {
         answer_array[2] = vector[2] - vector[0];
         for (int i = 3; i < n; i++) {
             answer_array[i] = std::min(answer_array[i - 2], answer_array[i - 1]) + vector[i] - vector[i - 1];
         }
     }
-    std::cout << answer_array[n - 1];
+    std::cout << answer_array[n - 1] << "\n";
+    delete array;
 }
