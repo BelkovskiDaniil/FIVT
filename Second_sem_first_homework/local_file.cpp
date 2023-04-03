@@ -30,4 +30,5 @@ int main() {
     }
     std::cout << answer_array[n - 1] << "\n";
     delete array;
+    delete answer_array;
 }
