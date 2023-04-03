@@ -5,12 +5,10 @@
 
 #include <iostream>
 #include <string>
-#include <algorithm>
-#include <cmath>
 
 int main() {
-    std::string biggest, smallest, str, first_number, second_number, answer, answer_new;
-    int mem = 0, number, sum, end;
+    std::string biggest, smallest, str, first_number, second_number, answer = "";
+    int size_biggest, size_smallest, number_biggest, number_smallest, zero = 0;
     std::cin >> first_number;
     std::cin >> second_number;
 
@@ -24,20 +22,20 @@ int main() {
         smallest = first_number;
     }
 
-    //Дописываем нули меньшему числу и складываем столбиком
-    number = abs(biggest.size() - smallest.size());
-    for (int i = 0; i < number; i++) smallest = '0' + smallest;
-    for (int i = biggest.size() - 1; i >= 0; i--) {
-        sum = (biggest[i] - '0') + (smallest[i] - '0') + mem;
-        end = sum % 10;
-        str += end + '0';
-        if (i == 0) str += std::to_string(sum);
-        mem = sum / 10;
+    size_biggest = biggest.size() - 1;
+    size_smallest = smallest.size() - 1;
+
+    //Производим сложение
+    for(int i = 0; i <= size_biggest; i++){
+        number_biggest = i <= size_biggest ? biggest[size_biggest - i] - '0': 0;
+        number_smallest = i <= size_smallest ? smallest[size_smallest - i] - '0': 0;
+        answer = char((number_biggest + number_smallest + zero) % 10 + '0') + answer;
+        zero = (number_biggest + number_smallest + zero) / 10;
+
     }
-    reverse(str.begin(), str.end());
-    answer = str.erase(0, 1);
-    if (answer.length() >= 2 && answer[0] == '-' && answer[1] == '-') answer_new = answer.substr(1, answer.length() - 1);
-    else answer_new = answer;
-    std::cout << answer_new << std::endl;
+
+    if(zero) answer = char(zero + '0') + answer;
+
+    std::cout << answer << "\n";
     return 0;
 }
