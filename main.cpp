@@ -1,142 +1,80 @@
-/*Дано число N < 106 и последовательность целых чисел из [-231..231] длиной N.
- * Требуется построить бинарное дерево, заданное наивным порядком вставки.
- * Т.е., при добавлении очередного числа K в дерево с корнем root, если root→Key ≤ K,
- * то узел K добавляется в правое поддерево root; иначе в левое поддерево root.
- * Выведите элементы в порядке pre-order (сверху вниз).
- * Рекурсия запрещена.*/
+/*Требуется отыскать самый короткий маршрут между городами.
+ * Из города может выходить дорога, которая возвращается в этот же город.
 
-//https://contest.yandex.ru/contest/43508/run-report/80023763/
+Требуемое время работы O((N + M)log N), где N – количество городов, M – известных дорог между ними.
+N ≤ 10000, M ≤ 250000.
+Длина каждой дороги ≤ 10000.
+
+ https://contest.yandex.ru/contest/47820/run-report/86293915/
+ */
 
 #include <iostream>
 #include <vector>
-#include <queue>
+#include <set>
+#include <list>
+#include <limits>
 
-struct Node {
-    ~Node();
-
-    int Data;
-    Node* Left = nullptr;
-    Node* Right = nullptr;
-    Node* Parent = nullptr;
-
-    explicit Node(int data, Node* parent = nullptr) : Data(data), Parent(parent) {}
-};
-
-Node::~Node() {
-    delete Left;
-    delete Right;
-}
-
-class Tree {
+//Класс графа, строящегося по условию задачи
+class city_map {
 public:
-    ~Tree();
-    void add(int key);
-    std::deque<int> pre_order();
-
-private:
-    Node* root = nullptr;
+    explicit city_map(int size);
+    void set_road(int start, int end, int weight);
+    void get_vert(int vertex, std::vector<std::pair<int, int>> &vert) const;
+    int get_size() const;
+    std::vector<std::list<std::pair<int, int>>> vertices;
 };
 
-Tree::~Tree() {
-    delete root;
+city_map::city_map(int size) : vertices(size, std::list<std::pair<int, int>>()) {}
+
+//Добавляем дорогу (ребро) в граф
+void city_map::set_road(int start, int end, int weight) {
+    vertices[start].emplace_back(end, weight);
+    vertices[end].emplace_back(start, weight);
 }
 
-void Tree::add(int key) {
-    if (!root) {
-        root = new Node(key);
-        return;
-    }
-
-    Node* current = root;
-    while (true) {
-
-        if (current->Data > key) {
-            if (current->Left != nullptr)
-                current = current->Left;
-            else {
-                current->Left = new Node(key, current);
-                break;
-            }
-        }
-
-        else {
-            if (current->Right != nullptr)
-                current = current->Right;
-            else {
-                current->Right = new Node(key, current);
-                break;
-            }
-        }
-    }
+int city_map::get_size() const {
+    return vertices.size();
 }
 
-std::deque<int> Tree::pre_order() {
-    std::deque<int> answer;
+void city_map::get_vert(int vertex, std::vector<std::pair<int, int>> &vert) const {
+    vert.clear();
+    for (const std::pair<int, int> &elem : vertices[vertex]) vert.push_back(elem);
+}
 
-    if (root == nullptr){
-        return answer;
-    }
-
-    std::deque<Node*> queue_local_left;
-    std::deque<Node*> queue_local_right;
-    queue_local_left.push_back(root);
-    while((!queue_local_left.empty()) or (!queue_local_right.empty())){
-
-        //Сначала проверяем левую ветвь на пустоту
-        if (!queue_local_left.empty()) {
-            Node * node = queue_local_left.front();
-            queue_local_left.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-        //Затем правую
-        else if (!queue_local_right.empty()) {
-            Node * node = queue_local_right.front();
-            queue_local_right.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
+//Используем алгоритм Дейкстры
+int algo_dij(const city_map &city_map, int start, int end) {
+    std::vector<bool> visited(city_map.get_size(), false);
+    std::vector<int> path(city_map.get_size(), std::numeric_limits<int>::max());
+    path[start] = 0;
+    std::set<std::pair<int, int>> queue;
+    queue.emplace(std::make_pair(0, start));
+    while (!queue.empty()) {
+        std::vector<std::pair<int, int>> paths;
+        int number = (queue.begin())->second;
+        queue.erase(queue.begin());
+        visited[number] = true;
+        city_map.get_vert(number, paths);
+        for (std::pair<int, int> elem : paths) {
+            if (path[elem.first] > path[number] + elem.second) {
+                if (path[elem.first] != std::numeric_limits<int>::max())
+                    queue.erase(std::make_pair(path[elem.first], elem.first));
+                path[elem.first] = path[number] + elem.second;
+                queue.emplace(std::make_pair(path[elem.first], elem.first));
             }
         }
-
-
     }
-    return answer;
+    return path[end];
 }
 
 int main() {
-    Tree tree;
-    int n = 0, number = 0;
-    std::cin >> n;
-
-    for (int i = 0; i < n; i++) {
-        std::cin >> number;
-        tree.add(number);
+    int n = 0, m = 0, start = 0, end = 0, weight = 0;
+    std::cin >> n >> m;
+    city_map city_map(n);
+    for (int i = 0; i < m; i++) {
+        std::cin >> start >> end >> weight;
+        city_map.set_road(start, end, weight);
     }
-
-    //Заполняем очередь
-    std::deque<int> answer = tree.pre_order();
-
-    //Печатаем, пока очередь не опустеет
-    while(!answer.empty()){
-        std::cout << answer.front() << ' ';
-        answer.pop_front();
-    }
-
-    std::cout << std::endl;
-
+    std::cin >> start >> end;
+    std::cout << algo_dij(city_map, start, end) << "\n";
     return 0;
 }
