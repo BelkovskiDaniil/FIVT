@@ -1,142 +1,106 @@
-/*Дано число N < 106 и последовательность целых чисел из [-231..231] длиной N.
- * Требуется построить бинарное дерево, заданное наивным порядком вставки.
- * Т.е., при добавлении очередного числа K в дерево с корнем root, если root→Key ≤ K,
- * то узел K добавляется в правое поддерево root; иначе в левое поддерево root.
- * Выведите элементы в порядке pre-order (сверху вниз).
- * Рекурсия запрещена.*/
+/*Необходимо написать торгового советника для поиска арбитража.
+Арбитраж - это торговля по цепочке различных валют в надежде заработать на небольших различиях в коэффициентах. Например, есть следующие курсы валют:
+GBP/USD: 0.67
+RUB/GBP: 78.66
+USD/RUB: 0.02
+Имея 1$ и совершив цикл USD->GBP->RUB->USD, получим 1.054$. Таким образом заработав 5.4
 
-//https://contest.yandex.ru/contest/43508/run-report/80023763/
+https://contest.yandex.ru/contest/47820/run-report/86282080
+ */
+
 
 #include <iostream>
 #include <vector>
-#include <queue>
+#include <limits>
 
-struct Node {
-    ~Node();
-
-    int Data;
-    Node* Left = nullptr;
-    Node* Right = nullptr;
-    Node* Parent = nullptr;
-
-    explicit Node(int data, Node* parent = nullptr) : Data(data), Parent(parent) {}
-};
-
-Node::~Node() {
-    delete Left;
-    delete Right;
-}
-
-class Tree {
+//Класс графа с помощью которого входная таблица превращается в граф
+class arbitrage_graph {
 public:
-    ~Tree();
-    void add(int key);
-    std::deque<int> pre_order();
+    explicit arbitrage_graph();
+    void initialize_graph(int count);
+    virtual void set_edge(int start, int end, double weight) ;
+    double get_weight(int start, int end);
+    virtual int quantity_of_vertices_virtual() const  { return quantity_of_vertices; }
 
 private:
-    Node* root = nullptr;
+    int quantity_of_vertices;
+    std::vector<std::vector<double>> edges;
 };
 
-Tree::~Tree() {
-    delete root;
+double arbitrage_graph::get_weight(int start, int end) {
+    return edges[start][end];
 }
 
-void Tree::add(int key) {
-    if (!root) {
-        root = new Node(key);
-        return;
-    }
+arbitrage_graph::arbitrage_graph() :
+        quantity_of_vertices(-1),
+        edges(0)
+{}
 
-    Node* current = root;
-    while (true) {
-
-        if (current->Data > key) {
-            if (current->Left != nullptr)
-                current = current->Left;
-            else {
-                current->Left = new Node(key, current);
-                break;
-            }
-        }
-
-        else {
-            if (current->Right != nullptr)
-                current = current->Right;
-            else {
-                current->Right = new Node(key, current);
-                break;
-            }
-        }
-    }
+void arbitrage_graph::initialize_graph(int count) {
+    quantity_of_vertices = count;
+    edges.resize(count);
+    for (int i = 0; i < quantity_of_vertices; ++i) edges[i].resize(count);
 }
 
-std::deque<int> Tree::pre_order() {
-    std::deque<int> answer;
-
-    if (root == nullptr){
-        return answer;
-    }
-
-    std::deque<Node*> queue_local_left;
-    std::deque<Node*> queue_local_right;
-    queue_local_left.push_back(root);
-    while((!queue_local_left.empty()) or (!queue_local_right.empty())){
-
-        //Сначала проверяем левую ветвь на пустоту
-        if (!queue_local_left.empty()) {
-            Node * node = queue_local_left.front();
-            queue_local_left.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-        //Затем правую
-        else if (!queue_local_right.empty()) {
-            Node * node = queue_local_right.front();
-            queue_local_right.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-
-    }
-    return answer;
+void arbitrage_graph::set_edge(int start, int end, double weight) {
+    edges[start][end] = weight;
 }
 
+//Используем алгоритм Беллмана-Форда
+void algo(arbitrage_graph *graph) {
+    double min_rate = std::numeric_limits<double>::min();
+    int quantity_of_curr = graph->quantity_of_vertices_virtual();
+    // Здесь храним информацию по арбитражному циклу (данному)
+    std::vector<double> rate(0);
+
+    //Здесь создаем вектор с данным арбитражем (если он нас удовлетворяет, то сразу выводим ответ)
+    for (int currency = 0; currency < quantity_of_curr; ++currency) {
+        rate.clear();
+        rate.resize(quantity_of_curr);
+        for (int i = 0; i < quantity_of_curr; ++i) rate[i] = min_rate;
+        rate[currency] = 1.0;
+
+        for (int k = 0; k <= quantity_of_curr; ++k) {
+            for(int i = 0; i < quantity_of_curr; ++i) {
+                for (int j = 0; j < quantity_of_curr; ++j) {
+                    if (rate[j] < rate[i] * graph->get_weight(i, j)) {
+                        if (k == quantity_of_curr) {
+                            std::cout << "\n" << "YES" << "\n";
+                            return;
+                        }
+                        rate[j] = rate[i] * graph->get_weight(i, j);
+                    }
+                }
+            }
+        }
+    }
+
+    std::cout << "\n" << "NO" << "\n";
+    return;
+}
+
+//Создаем граф, считываем таблицу и запускаем алгоритм
 int main() {
-    Tree tree;
-    int n = 0, number = 0;
+    arbitrage_graph	graph;
+    int n = 0;
     std::cin >> n;
-
-    for (int i = 0; i < n; i++) {
-        std::cin >> number;
-        tree.add(number);
+    graph.initialize_graph(n);
+    for (int i = 0; i < n; ++i)
+    {
+        for (int j = 0; j < n; ++j)
+        {
+            if (i == j)
+                graph.set_edge(i, j, 1);
+            else
+            {
+                double temp;
+                std::cin >> temp;
+                if (temp == -1)
+                    continue;
+                graph.set_edge(i, j, temp);
+            }
+        }
     }
-
-    //Заполняем очередь
-    std::deque<int> answer = tree.pre_order();
-
-    //Печатаем, пока очередь не опустеет
-    while(!answer.empty()){
-        std::cout << answer.front() << ' ';
-        answer.pop_front();
-    }
-
-    std::cout << std::endl;
-
+    algo(&graph);
     return 0;
 }
