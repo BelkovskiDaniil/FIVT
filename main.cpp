@@ -71,7 +71,7 @@ int main() {
     }
 
     int minWeight = algorithm_k(ribs, n);
-    cout << minWeight << endl;
+    cout << minWeight << "\n";
 
     return 0;
 }
