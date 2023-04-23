@@ -70,7 +70,7 @@ public:
                 }
             }
         }
-        std::cout << bfc_local[end].uniq_ways;
+        std::cout << bfc_local[end].uniq_ways << "\n";
         return;
     }
 
