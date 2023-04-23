@@ -65,7 +65,7 @@ void algo(arbitrage_graph *graph) {
                 for (int j = 0; j < quantity_of_curr; ++j) {
                     if (rate[j] < rate[i] * graph->get_weight(i, j)) {
                         if (k == quantity_of_curr) {
-                            std::cout << std::endl << "YES";
+                            std::cout << "\n" << "YES" << "\n";
                             return;
                         }
                         rate[j] = rate[i] * graph->get_weight(i, j);
@@ -75,7 +75,7 @@ void algo(arbitrage_graph *graph) {
         }
     }
 
-    std::cout << std::endl << "NO";
+    std::cout << "\n" << "NO" << "\n";
     return;
 }
 
