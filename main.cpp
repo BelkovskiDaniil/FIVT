@@ -1,142 +1,77 @@
-/*Дано число N < 106 и последовательность целых чисел из [-231..231] длиной N.
- * Требуется построить бинарное дерево, заданное наивным порядком вставки.
- * Т.е., при добавлении очередного числа K в дерево с корнем root, если root→Key ≤ K,
- * то узел K добавляется в правое поддерево root; иначе в левое поддерево root.
- * Выведите элементы в порядке pre-order (сверху вниз).
- * Рекурсия запрещена.*/
-
-//https://contest.yandex.ru/contest/43508/run-report/80023763/
+/*Найти в связном графе остовное дерево минимального веса.
+ *https://contest.yandex.ru/contest/47820/run-report/86275544/*/
 
 #include <iostream>
 #include <vector>
-#include <queue>
+#include <algorithm>
 
-struct Node {
-    ~Node();
+using namespace std;
 
-    int Data;
-    Node* Left = nullptr;
-    Node* Right = nullptr;
-    Node* Parent = nullptr;
-
-    explicit Node(int data, Node* parent = nullptr) : Data(data), Parent(parent) {}
+//Структура ребра
+struct rib {
+    int u, v, weight;
 };
 
-Node::~Node() {
-    delete Left;
-    delete Right;
+//Сравнения ребер графа
+bool compareribs(const rib& a, const rib& b) {
+    return a.weight < b.weight;
 }
 
-class Tree {
-public:
-    ~Tree();
-    void add(int key);
-    std::deque<int> pre_order();
-
-private:
-    Node* root = nullptr;
-};
-
-Tree::~Tree() {
-    delete root;
-}
-
-void Tree::add(int key) {
-    if (!root) {
-        root = new Node(key);
-        return;
+int find(int x, vector<int>& parent) {
+    if (parent[x] != x) {
+        parent[x] = find(parent[x], parent);
     }
+    return parent[x];
+}
 
-    Node* current = root;
-    while (true) {
-
-        if (current->Data > key) {
-            if (current->Left != nullptr)
-                current = current->Left;
-            else {
-                current->Left = new Node(key, current);
-                break;
-            }
-        }
-
-        else {
-            if (current->Right != nullptr)
-                current = current->Right;
-            else {
-                current->Right = new Node(key, current);
-                break;
+//Объединяем множества, содержащие x и y
+void unite(int x, int y, vector<int>& parent, vector<int>& rank) {
+    int rootX = find(x, parent);
+    int rootY = find(y, parent);
+    if (rootX != rootY) {
+        if (rank[rootX] > rank[rootY]) {
+            parent[rootY] = rootX;
+        } else {
+            parent[rootX] = rootY;
+            if (rank[rootX] == rank[rootY]) {
+                rank[rootY]++;
             }
         }
     }
 }
 
-std::deque<int> Tree::pre_order() {
-    std::deque<int> answer;
+//Алгоритм Крускала
+int algorithm_k(vector<rib>& ribs, int n) {
+    sort(ribs.begin(), ribs.end(), compareribs);
 
-    if (root == nullptr){
-        return answer;
+    vector<int> parent(n + 1);
+    vector<int> rank(n + 1, 0);
+    for (int i = 1; i <= n; i++) {
+        parent[i] = i;
     }
 
-    std::deque<Node*> queue_local_left;
-    std::deque<Node*> queue_local_right;
-    queue_local_left.push_back(root);
-    while((!queue_local_left.empty()) or (!queue_local_right.empty())){
-
-        //Сначала проверяем левую ветвь на пустоту
-        if (!queue_local_left.empty()) {
-            Node * node = queue_local_left.front();
-            queue_local_left.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
+    int minWeight = 0;
+    for (const rib& rib : ribs) {
+        if (find(rib.u, parent) != find(rib.v, parent)) {
+            unite(rib.u, rib.v, parent, rank);
+            minWeight += rib.weight;
         }
-
-        //Затем правую
-        else if (!queue_local_right.empty()) {
-            Node * node = queue_local_right.front();
-            queue_local_right.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-
     }
-    return answer;
+
+    return minWeight;
 }
 
 int main() {
-    Tree tree;
-    int n = 0, number = 0;
-    std::cin >> n;
+    int n, m;
+    cin >> n >> m;
 
-    for (int i = 0; i < n; i++) {
-        std::cin >> number;
-        tree.add(number);
+    vector<rib> ribs(m);
+    for (int i = 0; i < m; i++) {
+        cin >> ribs[i].u >> ribs[i].v >> ribs[i].weight;
     }
 
-    //Заполняем очередь
-    std::deque<int> answer = tree.pre_order();
-
-    //Печатаем, пока очередь не опустеет
-    while(!answer.empty()){
-        std::cout << answer.front() << ' ';
-        answer.pop_front();
-    }
-
-    std::cout << std::endl;
+    int minWeight = algorithm_k(ribs, n);
+    cout << minWeight << endl;
 
     return 0;
 }
