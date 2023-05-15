@@ -40,38 +40,37 @@ public:
     }
 
     //Запускаем обход в ширину, в процессе которого ищем уникальные пути и выводим их в конце алгоритма
-    void bfs(int start, int end) {
+    int bfs(int start, int end) {
         int min_len = -1;
         std::queue<int> queue_local;
-        std::vector<int> vector_of_vertexes;
         bfc_local[start].uniq_ways = 1;
 
         queue_local.push(start);
         while (queue_local.empty() == 0) {
             int temporaryVert = queue_local.front();
             queue_local.pop();
-            get_vertexes_near(temporaryVert, vector_of_vertexes);
+            if (vector_of_vertexes.empty() != 1) { vector_of_vertexes.clear(); }
+            std::vector<int> vector_of_vertexes = vertexes[temporaryVert];
 
             //В данном цикле ищем кратчайшие пути
-            for (unsigned int i = 0; i < vector_of_vertexes.size(); i++) {
+            for (int vertex : vector_of_vertexes) {
                 // Если вершина не родительская, то смотрим, бывали ли мы в ней, если нет, то обновляем расстояние до нее и отмечаем как посещенную
-                if (vector_of_vertexes[i] != bfc_local[temporaryVert].parent) {
-                    if (!bfc_local[vector_of_vertexes[i]].visited) {
-                        queue_local.push(vector_of_vertexes[i]);
-                        bfc_local[vector_of_vertexes[i]].parent = temporaryVert;
-                        bfc_local[vector_of_vertexes[i]].distance = bfc_local[temporaryVert].distance + 1;
-                        bfc_local[vector_of_vertexes[i]].visited = true;
+                if (vertex != bfc_local[temporaryVert].parent) {
+                    if (!bfc_local[vertex].visited) {
+                        queue_local.push(vertex);
+                        bfc_local[vertex].parent = temporaryVert;
+                        bfc_local[vertex].distance = bfc_local[temporaryVert].distance + 1;
+                        bfc_local[vertex].visited = true;
                     }
                     
                     // Смотрим, пришли ли в конечную, если пришли, смотрим на min_len, если больше, то заканчиваем bfs, иначе - обновляем минимальное расстояние и добавляем путь
-                    if ((vector_of_vertexes[i] == end) && (min_len == -1)) min_len = bfc_local[end].distance;
-                    if ((min_len != -1)&&(bfc_local[vector_of_vertexes[i]].distance > min_len)) break;
-                    if (bfc_local[temporaryVert].distance==bfc_local[vector_of_vertexes[i]].distance-1) bfc_local[vector_of_vertexes[i]].uniq_ways += bfc_local[temporaryVert].uniq_ways;
+                    if ((vertex == end) && (min_len == -1)) min_len = bfc_local[end].distance;
+                    if ((min_len != -1)&&(bfc_local[vertex].distance > min_len)) break;
+                    if (bfc_local[temporaryVert].distance==bfc_local[vertex].distance-1) bfc_local[vertex].uniq_ways += bfc_local[temporaryVert].uniq_ways;
                 }
             }
         }
-        std::cout << bfc_local[end].uniq_ways << "\n";
-        return;
+        return bfc_local[end].uniq_ways;
     }
 
 // Количество вершин и списки смежности
@@ -94,6 +93,6 @@ int main() {
     }
     std::cin >> start;
     std::cin >> end;
-    graph.bfs(start, end);
+    std::cout << graph.bfs(start, end) << "\n";
     return 0;
 }
