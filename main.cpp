@@ -1,142 +1,98 @@
-/*Дано число N < 106 и последовательность целых чисел из [-231..231] длиной N.
- * Требуется построить бинарное дерево, заданное наивным порядком вставки.
- * Т.е., при добавлении очередного числа K в дерево с корнем root, если root→Key ≤ K,
- * то узел K добавляется в правое поддерево root; иначе в левое поддерево root.
- * Выведите элементы в порядке pre-order (сверху вниз).
- * Рекурсия запрещена.*/
+/*Дан невзвешенный неориентированный граф.
+ *В графе может быть несколько кратчайших путей между какими-то вершинами.
+ *Найдите количество различных кратчайших путей между заданными вершинами.
+ *Требуемая сложность O(V+E).
+ *
+ * https://contest.yandex.ru/contest/47820/run-report/86291458/
+ * */
 
-//https://contest.yandex.ru/contest/43508/run-report/80023763/
-
-#include <iostream>
 #include <vector>
 #include <queue>
+#include <iostream>
 
-struct Node {
-    ~Node();
-
-    int Data;
-    Node* Left = nullptr;
-    Node* Right = nullptr;
-    Node* Parent = nullptr;
-
-    explicit Node(int data, Node* parent = nullptr) : Data(data), Parent(parent) {}
+//Параметры графа
+struct characteristics_of_graph {
+    int uniq_ways = 0;
+    int parent = -1;
+    bool visited = false;
+    int distance = 0;
 };
 
-Node::~Node() {
-    delete Left;
-    delete Right;
-}
-
-class Tree {
+//Граф, создаваемый по входным данным
+class unoriented_graph {
 public:
-    ~Tree();
-    void add(int key);
-    std::deque<int> pre_order();
 
+    explicit unoriented_graph(int data) :
+            quantity_vertexes(data),
+            vertexes(data),
+            bfc_local(data)
+    { }
+
+    void set_way(int data_start, int data_end) {
+        vertexes[data_start].push_back(data_end);
+        vertexes[data_end].push_back(data_start);
+    }
+
+    //Находим ближайшие вершины
+    void get_vertexes_near(int data, std::vector<int>& dataVector) const {
+        if (dataVector.empty() != 1) { dataVector.clear(); }
+        dataVector = vertexes[data];
+    }
+
+    //Запускаем обход в ширину, в процессе которого ищем уникальные пути и выводим их в конце алгоритма
+    int bfs(int start, int end) {
+        int min_len = -1;
+        std::queue<int> queue_local;
+        bfc_local[start].uniq_ways = 1;
+
+        queue_local.push(start);
+        while (queue_local.empty() == 0) {
+            int temporaryVert = queue_local.front();
+            queue_local.pop();
+            if (vector_of_vertexes.empty() != 1) { vector_of_vertexes.clear(); }
+            std::vector<int> vector_of_vertexes = vertexes[temporaryVert];
+
+            //В данном цикле ищем кратчайшие пути
+            for (int vertex : vector_of_vertexes) {
+                // Если вершина не родительская, то смотрим, бывали ли мы в ней, если нет, то обновляем расстояние до нее и отмечаем как посещенную
+                if (vertex != bfc_local[temporaryVert].parent) {
+                    if (!bfc_local[vertex].visited) {
+                        queue_local.push(vertex);
+                        bfc_local[vertex].parent = temporaryVert;
+                        bfc_local[vertex].distance = bfc_local[temporaryVert].distance + 1;
+                        bfc_local[vertex].visited = true;
+                    }
+                    
+                    // Смотрим, пришли ли в конечную, если пришли, смотрим на min_len, если больше, то заканчиваем bfs, иначе - обновляем минимальное расстояние и добавляем путь
+                    if ((vertex == end) && (min_len == -1)) min_len = bfc_local[end].distance;
+                    if ((min_len != -1)&&(bfc_local[vertex].distance > min_len)) break;
+                    if (bfc_local[temporaryVert].distance==bfc_local[vertex].distance-1) bfc_local[vertex].uniq_ways += bfc_local[temporaryVert].uniq_ways;
+                }
+            }
+        }
+        return bfc_local[end].uniq_ways;
+    }
+
+// Количество вершин и списки смежности
 private:
-    Node* root = nullptr;
+    int quantity_vertexes;
+    std::vector<std::vector<int>> vertexes;
+    std::vector<characteristics_of_graph> bfc_local;
+
 };
-
-Tree::~Tree() {
-    delete root;
-}
-
-void Tree::add(int key) {
-    if (!root) {
-        root = new Node(key);
-        return;
-    }
-
-    Node* current = root;
-    while (true) {
-
-        if (current->Data > key) {
-            if (current->Left != nullptr)
-                current = current->Left;
-            else {
-                current->Left = new Node(key, current);
-                break;
-            }
-        }
-
-        else {
-            if (current->Right != nullptr)
-                current = current->Right;
-            else {
-                current->Right = new Node(key, current);
-                break;
-            }
-        }
-    }
-}
-
-std::deque<int> Tree::pre_order() {
-    std::deque<int> answer;
-
-    if (root == nullptr){
-        return answer;
-    }
-
-    std::deque<Node*> queue_local_left;
-    std::deque<Node*> queue_local_right;
-    queue_local_left.push_back(root);
-    while((!queue_local_left.empty()) or (!queue_local_right.empty())){
-
-        //Сначала проверяем левую ветвь на пустоту
-        if (!queue_local_left.empty()) {
-            Node * node = queue_local_left.front();
-            queue_local_left.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-        //Затем правую
-        else if (!queue_local_right.empty()) {
-            Node * node = queue_local_right.front();
-            queue_local_right.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-
-    }
-    return answer;
-}
 
 int main() {
-    Tree tree;
-    int n = 0, number = 0;
-    std::cin >> n;
-
-    for (int i = 0; i < n; i++) {
-        std::cin >> number;
-        tree.add(number);
+    int V, N, start, end, data_start, data_end;
+    std::cin >> V;
+    std::cin >> N;
+    unoriented_graph graph(V);
+    for (int i = 0; i < N; i++) {
+        std::cin >> data_start;
+        std::cin >> data_end;
+        graph.set_way(data_start, data_end);
     }
-
-    //Заполняем очередь
-    std::deque<int> answer = tree.pre_order();
-
-    //Печатаем, пока очередь не опустеет
-    while(!answer.empty()){
-        std::cout << answer.front() << ' ';
-        answer.pop_front();
-    }
-
-    std::cout << std::endl;
-
+    std::cin >> start;
+    std::cin >> end;
+    std::cout << graph.bfs(start, end) << "\n";
     return 0;
 }
