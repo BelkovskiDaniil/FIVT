@@ -1,142 +1,96 @@
-/*Дано число N < 106 и последовательность целых чисел из [-231..231] длиной N.
- * Требуется построить бинарное дерево, заданное наивным порядком вставки.
- * Т.е., при добавлении очередного числа K в дерево с корнем root, если root→Key ≤ K,
- * то узел K добавляется в правое поддерево root; иначе в левое поддерево root.
- * Выведите элементы в порядке pre-order (сверху вниз).
- * Рекурсия запрещена.*/
+/*Дана строка длины n. Найти количество ее различных подстрок. Используйте суффиксный массив.
 
-//https://contest.yandex.ru/contest/43508/run-report/80023763/
+Построение суффиксного массива выполняйте за O(n log n). Вычисление количества различных подстрок выполняйте за O(n).
+
+ https://contest.yandex.ru/contest/49263/run-report/87772055/*/
 
 #include <iostream>
 #include <vector>
-#include <queue>
+#include <algorithm>
 
-struct Node {
-    ~Node();
-
-    int Data;
-    Node* Left = nullptr;
-    Node* Right = nullptr;
-    Node* Parent = nullptr;
-
-    explicit Node(int data, Node* parent = nullptr) : Data(data), Parent(parent) {}
+// Структура для хранения информации о суффиксе
+struct Suffix {
+    int index;
+    int rank[2];
 };
 
-Node::~Node() {
-    delete Left;
-    delete Right;
+// Функция для сравнения суффиксов при сортировке
+bool suffixComparator(const Suffix& a, const Suffix& b) {
+    return (a.rank[0] == b.rank[0]) ? (a.rank[1] < b.rank[1]) : (a.rank[0] < b.rank[0]);
 }
 
-class Tree {
-public:
-    ~Tree();
-    void add(int key);
-    std::deque<int> pre_order();
+// Функция для построения суффиксного массива
+std::vector<int> buildSuffixArray(const std::string& str) {
+    int n = str.length();
+    std::vector<Suffix> suffixes(n);
 
-private:
-    Node* root = nullptr;
-};
-
-Tree::~Tree() {
-    delete root;
-}
-
-void Tree::add(int key) {
-    if (!root) {
-        root = new Node(key);
-        return;
+    for (int i = 0; i < n; ++i) {
+        suffixes[i].index = i;
+        suffixes[i].rank[0] = str[i] - 'a';
+        suffixes[i].rank[1] = (i + 1 < n) ? (str[i + 1] - 'a') : -1;
     }
 
-    Node* current = root;
-    while (true) {
+    std::sort(suffixes.begin(), suffixes.end(), suffixComparator);
 
-        if (current->Data > key) {
-            if (current->Left != nullptr)
-                current = current->Left;
+    std::vector<int> indexes(n);
+
+    for (int k = 4; k < 2 * n; k *= 2) {
+        int rank = 0;
+        int prevRank = suffixes[0].rank[0];
+        suffixes[0].rank[0] = rank;
+        indexes[suffixes[0].index] = 0;
+
+        for (int i = 1; i < n; ++i) {
+            if (suffixes[i].rank[0] == prevRank && suffixes[i].rank[1] == suffixes[i - 1].rank[1]) {
+                prevRank = suffixes[i].rank[0];
+                suffixes[i].rank[0] = rank;
+            }
             else {
-                current->Left = new Node(key, current);
-                break;
+                prevRank = suffixes[i].rank[0];
+                suffixes[i].rank[0] = ++rank;
             }
+            indexes[suffixes[i].index] = i;
         }
 
-        else {
-            if (current->Right != nullptr)
-                current = current->Right;
-            else {
-                current->Right = new Node(key, current);
-                break;
-            }
+        for (int i = 0; i < n; ++i) {
+            int nextIndex = suffixes[i].index + k / 2;
+            suffixes[i].rank[1] = (nextIndex < n) ? suffixes[indexes[nextIndex]].rank[0] : -1;
         }
+
+        std::sort(suffixes.begin(), suffixes.end(), suffixComparator);
     }
+
+    std::vector<int> suffixArray(n);
+    for (int i = 0; i < n; ++i) {
+        suffixArray[i] = suffixes[i].index;
+    }
+
+    return suffixArray;
 }
 
-std::deque<int> Tree::pre_order() {
-    std::deque<int> answer;
+// Функция для вычисления количества различных подстрок
+int countDistinctSubstrings(const std::string& str) {
+    int n = str.length();
+    std::vector<int> suffixArray = buildSuffixArray(str);
 
-    if (root == nullptr){
-        return answer;
+    int count = n - suffixArray[0];
+    for (int i = 1; i < n; ++i) {
+        int commonPrefix = 0;
+        while (str[suffixArray[i] + commonPrefix] == str[suffixArray[i - 1] + commonPrefix]) {
+            ++commonPrefix;
+        }
+        count += (n - suffixArray[i]) - commonPrefix;
     }
 
-    std::deque<Node*> queue_local_left;
-    std::deque<Node*> queue_local_right;
-    queue_local_left.push_back(root);
-    while((!queue_local_left.empty()) or (!queue_local_right.empty())){
-
-        //Сначала проверяем левую ветвь на пустоту
-        if (!queue_local_left.empty()) {
-            Node * node = queue_local_left.front();
-            queue_local_left.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-        //Затем правую
-        else if (!queue_local_right.empty()) {
-            Node * node = queue_local_right.front();
-            queue_local_right.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-
-    }
-    return answer;
+    return count;
 }
 
 int main() {
-    Tree tree;
-    int n = 0, number = 0;
-    std::cin >> n;
+    std::string str;
+    std::cin >> str;
 
-    for (int i = 0; i < n; i++) {
-        std::cin >> number;
-        tree.add(number);
-    }
-
-    //Заполняем очередь
-    std::deque<int> answer = tree.pre_order();
-
-    //Печатаем, пока очередь не опустеет
-    while(!answer.empty()){
-        std::cout << answer.front() << ' ';
-        answer.pop_front();
-    }
-
-    std::cout << std::endl;
+    int distinctSubstrings = countDistinctSubstrings(str);
+    std::cout << distinctSubstrings << std::endl;
 
     return 0;
 }
