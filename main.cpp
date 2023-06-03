@@ -1,139 +1,63 @@
-/*Дано число N < 106 и последовательность целых чисел из [-231..231] длиной N.
- * Требуется построить бинарное дерево, заданное наивным порядком вставки.
- * Т.е., при добавлении очередного числа K в дерево с корнем root, если root→Key ≤ K,
- * то узел K добавляется в правое поддерево root; иначе в левое поддерево root.
- * Выведите элементы в порядке pre-order (сверху вниз).
- * Рекурсия запрещена.*/
+/*Найдите все вхождения шаблона в строку. Длина шаблона – p, длина строки – n. Время O(n + p), доп. память – O(p).
+Вариант 1. С помощью префикс-функции
 
-//https://contest.yandex.ru/contest/43508/run-report/80023763/
+https://contest.yandex.ru/contest/49263/run-report/87921477/*/
 
 #include <iostream>
 #include <vector>
-#include <queue>
+#include <string>
 
-struct Node {
-    ~Node();
-
-    int Data;
-    Node* Left = nullptr;
-    Node* Right = nullptr;
-    Node* Parent = nullptr;
-
-    explicit Node(int data, Node* parent = nullptr) : Data(data), Parent(parent) {}
-};
-
-Node::~Node() {
-    delete Left;
-    delete Right;
+std::vector<int> prefix_function(const std::string& s) {
+    int n = s.size();
+    std::vector<int> pi(n, 0);
+    for (int i = 1; i < n; ++i) {
+        int j = pi[i - 1];
+        while (j > 0 && s[i] != s[j]) {
+            j = pi[j - 1];
+        }
+        if (s[i] == s[j]) {
+            ++j;
+        }
+        pi[i] = j;
+    }
+    return pi;
 }
 
-class Tree {
-public:
-    ~Tree();
-    void add(int key);
-    std::deque<int> pre_order();
-
-private:
-    Node* root = nullptr;
-};
-
-Tree::~Tree() {
-    delete root;
-}
-
-void Tree::add(int key) {
-    if (!root) {
-        root = new Node(key);
-        return;
+std::vector<int> kmp(const std::string& pattern, const std::string& s) {
+    std::vector<int> pi = prefix_function(pattern);
+    int n = s.size();
+    int m = pattern.size();
+    std::vector<int> matches;
+    if (m == 0) {
+        matches.push_back(0);
+        return matches;
     }
 
-    Node* current = root;
-    while (true) {
-
-        if (current->Data > key) {
-            if (current->Left != nullptr)
-                current = current->Left;
-            else {
-                current->Left = new Node(key, current);
-                break;
-            }
+    int j = 0;
+    for (int i = 0; i < n; ++i) {
+        while (j > 0 && s[i] != pattern[j]) {
+            j = pi[j-1];
         }
-
-        else {
-            if (current->Right != nullptr)
-                current = current->Right;
-            else {
-                current->Right = new Node(key, current);
-                break;
-            }
+        if (s[i] == pattern[j]) {
+            ++j;
+        }
+        if (j == m) {
+            matches.push_back(i - m + 1);
+            j = pi[j-1];
         }
     }
-}
-
-std::deque<int> Tree::pre_order() {
-    std::deque<int> answer;
-
-    if (root == nullptr){
-        return answer;
-    }
-
-    std::deque<Node*> queue_local_left;
-    std::deque<Node*> queue_local_right;
-    queue_local_left.push_back(root);
-    while((!queue_local_left.empty()) or (!queue_local_right.empty())){
-
-        //Сначала проверяем левую ветвь на пустоту
-        if (!queue_local_left.empty()) {
-            Node * node = queue_local_left.front();
-            queue_local_left.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-        //Затем правую
-        else if (!queue_local_right.empty()) {
-            Node * node = queue_local_right.front();
-            queue_local_right.pop_front();
-            answer.push_back(node->Data);
-            //Выбираем дальнейший путь
-            if(node->Left != nullptr){
-                queue_local_left.push_front(node->Left);
-            }
-
-            if(node->Right != nullptr){
-                queue_local_right.push_front(node->Right);
-            }
-        }
-
-
-    }
-    return answer;
+    return matches;
 }
 
 int main() {
-    Tree tree;
-    int n = 0, number = 0;
-    std::cin >> n;
+    std::string pattern;
+    std::string s;
+    std::cin >> pattern >> s;
 
-    for (int i = 0; i < n; i++) {
-        std::cin >> number;
-        tree.add(number);
-    }
+    auto matches = kmp(pattern, s);
 
-    //Заполняем очередь
-    std::deque<int> answer = tree.pre_order();
-
-    //Печатаем, пока очередь не опустеет
-    while(!answer.empty()){
-        std::cout << answer.front() << ' ';
-        answer.pop_front();
+    for (auto match : matches) {
+        std::cout << match << " ";
     }
 
     std::cout << std::endl;
